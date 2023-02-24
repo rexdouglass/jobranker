@@ -18,14 +18,14 @@ The repository includes a demostration DuckDB database as well as publically fac
 The repository is organized around a module "jobranker" in the root folder. Within you will find the main point of entry "app.py" which can be run nightly using a scheduler such as chron. The main functions are contained in the "common" module and are organized as follows:
 
 1. Web Crawler
- * webscraper.py
- * zero_shot_classifier.py
- * link_classifier.py
-1. Post Extractor
- * question_answering.py
- * post_feature_extraction.py
+ * webscraper.py - Responsible for collecting and parsing HTML
+ * zero_shot_classifier.py - NLP pipeline for zero shot classification of text into categories
+ * link_classifier.py - Logic for classifying links as "To a job posting" or not.
+2. Post Extractor
+ * question_answering.py - NLP pipeline for question answering from short spans of text.
+ * post_feature_extraction.py - Applies question answering to job posts to extrcat and clean key facts
 3. Poster Ranker
- * ranker.py
+ * ranker.py - Produces a ranking over job posts using weak supervision and a list of hand written rules
 
 ### License
 
