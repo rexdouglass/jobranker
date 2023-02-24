@@ -1,4 +1,9 @@
-#Question Answering
+# Copyright Rex W, Douglass 2023
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+This is an NLP pipeline that performs question answering over short texts and returns a pandas dataframe with answers.
+"""
 
 import pandas as pd
 import re
@@ -18,7 +23,23 @@ def question_answer( texts: str,
                      device: str ="cuda:0",
                      verbose: bool =True
                      ) -> pd.DataFrame:
-
+  """
+    Takes in a vector of texts and urls. Applies a question to a given QA model from huggingface. Returns a dataframe with URL-Answer pairs and scores.
+    :param texts: Vector of texts to be extracted from (refered to as 'contexts' by the model)
+    :param urls: URLs for mapping back to job post database
+    :param question: Question to pose
+    :param model: Huggingface model to apply
+    :param device: cuda or cpu device to execute model on
+    :param verbose: Whether to print diagnostic information prior to run
+    :type arg1: str
+    :type arg2: str
+    :type arg3: str
+    :type arg4: str
+    :type arg5: str
+    :type arg6: bool
+    :returns: Pandas data frame with URL-Answer/Score rows
+    :rtype: pd.DataFrame
+  """
   if verbose:
     torch.cuda.is_available()
     torch.cuda.device_count()

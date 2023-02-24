@@ -1,4 +1,10 @@
-#Zero shot classification of link titles
+# Copyright Rex W, Douglass 2023
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+This is an NLP pipeline that performs zero shot classification of short texts into categories and returns a pandas dataframe with answers.
+"""
+
 import pandas as pd
 import re
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -16,7 +22,21 @@ def zero_shot_classifier(texts: str,
                          device: str ="cuda:0",
                          verbose: bool =True
                          ) -> pd.DataFrame:
-
+  """
+    Takes in a vector of texts applies and applied a zero shot classification model. Returns a dataframe with URL-Answer pairs and scores.
+    :param texts: Vector of texts to be classified.
+    :param candidate_labels: The categories for the model to apply nearest neighbor semantic classiciation toward.
+    :param model: Huggingface model to apply
+    :param device: cuda or cpu device to execute model on
+    :param verbose: Whether to print diagnostic information prior to run
+    :type arg1: str
+    :type arg2: str
+    :type arg3: str
+    :type arg4: str
+    :type arg5: bool
+    :returns: Pandas data frame with String-Category/Score rows
+    :rtype: pd.DataFrame
+  """
   if verbose:
     torch.cuda.is_available()
     torch.cuda.device_count()

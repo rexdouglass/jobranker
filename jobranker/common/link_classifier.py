@@ -5,7 +5,6 @@
 These utilities govern feature extraction from job posts
 """
 
-
 def classify_links(database: str) -> bool:
   with duckdb.connect(database, read_only=False) as con:
     #con.execute("""ALTER TABLE link_dyads DROP COLUMN IF EXISTS text_b_class_mnli;""")

@@ -2,18 +2,32 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-This where the logic for personalized ranking lies and for inserting those preferences
+This is where the logic for personalized ranking lies and for inserting those preferences
 into the database
 """
 
-
-def adjust_rank(score, criteria):
+def adjust_rank(score: int, criteria: str) -> bool:
+  """
+    Takes in a score to adjust the rank by and an SQL formatted where statement to append and execute.
+    :param score: The desired adjusment to score, positive or negative
+    :param criteria: The name of the specific sheet taken from the tab within the google sheet
+    :type arg1: int
+    :type arg2: str
+    :returns: Success
+    :rtype: bool
+  """
     with duckdb.connect(database=database, read_only=False) as con: 
       con.execute("""UPDATE job_posts SET rex_rank = rex_rank + """ + str(score) + """ WHERE """ + criteria )
     return True
 
 def ranker(database):
-
+  """
+    Applies personalized logic to rank job posts
+    :param database: The DUckDB database location
+    :type arg1: str
+    :returns: Success
+    :rtype: bool
+  """
   with duckdb.connect(database=database, read_only=False) as con: 
     con.execute("""ALTER TABLE job_posts DROP COLUMN IF EXISTS rex_rank;""")
     con.execute("""ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS rex_rank integer;""")

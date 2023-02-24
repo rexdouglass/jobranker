@@ -27,35 +27,35 @@ from jobranker.common.ranker import *
 
 if __name__ == '__main__':
   
+  #Load any already scraped links from seed URLS
   with duckdb.connect(database=database, read_only=False) as con:
     link_dyads=pd.read_sql("SELECT * FROM link_dyads;", con, parse_dates=["date_observed"])
-    LinkLabels=pd.read_csv("/mnt/8tb_a/rwd_github_private/DataJobsByRexDouglass/jobranker/database//LinkLabels.csv")
-  
+
   #Download and process the seed URLs from live googlesheet
   #https://docs.google.com/spreadsheets/d/1G8omZkflKz6xa7hb2pqvjbWarnSMXbLUInM1XITF2RE/edit?usp=sharing
   sheet_id="1G8omZkflKz6xa7hb2pqvjbWarnSMXbLUInM1XITF2RE"
   sheet_name="linkstojobposts"
   url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
   seed_urls=load_google_sheet(sheet_id=sheet_id,sheet_name=sheet_name)['url'].values
-  len(seed_urls)
   seed_urls_remaining = set(seed_urls).difference(set(link_dyads['url_a'].values))
-  len(seed_urls_remaining)
-  
-  #Iterative over and scrape seed URLS
+
+  #Iterate over and scrape seed URLS
   for url in seed_urls_remaining:
     print(url)
     html=scrape_url(url)
     link_dyads=extract_links_from_html(url=url, html=html)
     push_links_to_db(link_dyads=link_dyads, database=database)
   
-  #https://duckdb.org/docs/archive/0.3.2/api/python.html
+  #Collect additional features from URLs, e.g. host domain and absolute path
   push_splitlinks_to_db(database=database)
   
+  #Apply NLP to link texts to sort links to actual job postings from other website destinations
   classify_links(database=database)
   
+  #Apply criteria for classifying a link as worthwhile and push it to the job post database
   filter_links(database=database)
   
-  #Scrape Job Posts and Store Them
+  #Iterate over job posts and scrape/ store them
   with duckdb.connect(database=database, read_only=False) as con:
     con.execute("""ALTER TABLE job_posts ADD COLUMN IF NOT EXISTS html_text text;""")
     post_urls_remaining = pd.read_sql("SELECT url FROM job_posts WHERE html_text IS NULL;", con)['url'].values.astype(str)
