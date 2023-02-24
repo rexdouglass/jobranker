@@ -1,0 +1,69 @@
+---
+title: "Link Classification for Job Post Scraping"
+editor: visual
+---
+
+```{python}
+
+import pandas as pd
+import duckdb
+import numpy as np
+database='jobranker/database/jobranker.duckdb'
+with duckdb.connect(database=database, read_only=False) as con:
+  link_dyads=pd.read_sql("SELECT * FROM link_dyads;", con, parse_dates=["date_observed"])
+
+import pandas as pd
+LinkLabels = pd.read_csv("/mnt/8tb_a/rwd_github_private/DataJobsByRexDouglass/database/LinkLabels.csv")[['text_b','is_job']]
+
+LinkLabels = LinkLabels.merge( link_dyads[["text_b","text_b_class_mnli"]].drop_duplicates() , how="left", on="text_b" )
+LinkLabels['text_b_nchar'] = [len(q) for q in  LinkLabels['text_b']]
+
+LinkLabels['is_job'].sum() / LinkLabels.shape[0] #41% positive label
+```
+
+```{python}
+pd.crosstab(LinkLabels['text_b_class_mnli'], LinkLabels['is_job']).apply(lambda r: r/r.sum(), axis=1).round(2).sort_values(1, ascending=False)
+```
+
+```{python}
+import matplotlib.pyplot as plt
+boxplot = LinkLabels.boxplot(column=['text_b_nchar'], by=['is_job'])
+plt.show()
+```
+
+```{python}
+#Hand Rules
+condition1 = (LinkLabels['text_b_class_mnli']=="job title") |  (LinkLabels['text_b_nchar']>80)
+condition2 = (LinkLabels['text_b_class_mnli'].isin(['company','webpage','job website','link on a job website','symbols','url','website navigation']))
+
+LinkLabels['y_hat'] = condition1 & ~condition2
+LinkLabels['correct']= LinkLabels['is_job'] == LinkLabels['y_hat']
+
+from sklearn.metrics import accuracy_score
+accuracy_score(LinkLabels['is_job'], LinkLabels['y_hat'])
+
+pd.crosstab(LinkLabels['y_hat'][condition], LinkLabels['is_job'][condition]).apply(lambda r: r/r.sum(), axis=1).round(2).sort_values(1, ascending=False)
+
+
+```
+
+```{python, eval=F}
+
+one_hot = pd.get_dummies(LinkLabels['text_b_class_mnli'])
+
+from sklearn import tree
+iris = load_iris()
+X, y = pd.concat( [LinkLabels[['text_b_nchar']], one_hot],  axis=1) , LinkLabels[['is_job']]
+clf = tree.DecisionTreeClassifier()
+clf = clf.fit(X, y)
+#tree.plot_tree(clf)
+from sklearn.tree import export_text
+r = export_text(clf)
+
+```
+
+```{python, eval=F}
+plot_tree(clf, filled=True)
+plt.title("Decision tree trained on all the iris features")
+plt.show()
+```
