@@ -1,0 +1,81 @@
+---
+title: "Link Classification for Job Post Scraping"
+format:
+  html:
+    toc: true
+execute:
+  echo: false
+---
+
+
+```{python, echo=False}
+#| echo: false
+import pandas as pd
+import duckdb
+import numpy as np
+database='../jobranker/database/jobranker.duckdb'
+with duckdb.connect(database=database, read_only=False) as con:
+  link_dyads=pd.read_sql("SELECT * FROM link_dyads;", con, parse_dates=["date_observed"])
+
+import pandas as pd
+LinkLabels = pd.read_csv("../jobranker/database/LinkLabels.csv")[['text_b','is_job']]
+
+LinkLabels = LinkLabels.merge( link_dyads[["text_b","text_b_class_mnli"]].drop_duplicates() , how="left", on="text_b" )
+LinkLabels['text_b_nchar'] = [len(q) for q in  LinkLabels['text_b']]
+
+#LinkLabels['is_job'].sum() / LinkLabels.shape[0] #41% positive label
+```
+
+# Introduction
+
+This notebook briefly evaluates potential features for classifying links as "going to a job posting" and proposes and evaluates a simple decision rule. For ground truth a random sample of 1,833 unique link texts were hand labeled, 42% found to be to job postings.
+
+## Link Text Length
+
+The simplest feature turns out to be length of post, as long link texts typically meant many job details crammed into a single clickable chunk.
+
+```{python, echo=False}
+#| echo: false
+import matplotlib.pyplot as plt
+boxplot = LinkLabels.boxplot(column=['text_b_nchar'], by=['is_job'])
+plt.show()
+```
+
+## Zero Shot Text Classification
+
+Next I applied a zero shot text classifier using categories that represented both desired concepts as well as many representating negative cases seen in the data. Many of the categories do a good job either partially or completely seperating the links by the hand labeled ground truth.
+
+```{python, echo=False}
+#| echo: false
+pd.crosstab(LinkLabels['text_b_class_mnli'], LinkLabels['is_job']).apply(lambda r: r/r.sum(), axis=1).round(2).sort_values(1, ascending=False)
+```
+
+## Simple Decision Rule Classifier
+
+As a first approximation, I built a simple decision rule based on two criteria
+-Positive label if categorized exactly as a desired label ("job title", "job detail") or very long (>120 characters).
+-Negative label is categorized exactly as an undesired label ('company','webpage','job website','link on a job website','symbols','url','website navigation') or very short (<35 characters)
+
+```{python, echo=False}
+#| echo: false
+#Hand Rules
+condition1 = (LinkLabels['text_b_class_mnli'].isin(["job title",'job detail'] ) |  (LinkLabels['text_b_nchar']>120) )
+condition2 = (LinkLabels['text_b_class_mnli'].isin(['company','webpage','job website','link on a job website','symbols','url','website navigation']) |  (LinkLabels['text_b_nchar']<35) )
+
+LinkLabels['y_hat'] = condition1 & ~condition2
+LinkLabels['correct']= LinkLabels['is_job'] == LinkLabels['y_hat']
+
+from sklearn.metrics import accuracy_score
+#accuracy_score(LinkLabels['is_job'], LinkLabels['y_hat'])
+#round(accuracy_score(LinkLabels['is_job'], LinkLabels['y_hat']), 2)
+
+```
+
+This simple rule achieved 91% accuracy immediately. Importantly it achieved very high sensitivity 96%, not missing many true jobs.
+
+```{python, echo=False}
+pd.crosstab(LinkLabels['y_hat'], LinkLabels['is_job']).apply(lambda r: r/r.sum(), axis=1).round(2).sort_values(1, ascending=False)
+
+```
+
+
