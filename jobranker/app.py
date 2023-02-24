@@ -6,11 +6,14 @@ JobRanker main application
 Run nightly with a chron job
 """
 
+#Relative Path to DuckDB database
 database='jobranker/database/jobranker.duckdb'
 
+#Imports
 import numpy as np
 import pandas as pd
 import duckdb
+import pygsheets
 
 from jobranker.common.helpers import *
 
@@ -22,13 +25,11 @@ from jobranker.common.post_feature_extraction import *
 
 from jobranker.common.ranker import *
 
-
 with duckdb.connect(database=database, read_only=False) as con:
   link_dyads=pd.read_sql("SELECT * FROM link_dyads;", con, parse_dates=["date_observed"])
   LinkLabels=pd.read_csv("/mnt/8tb_a/rwd_github_private/DataJobsByRexDouglass/jobranker/database//LinkLabels.csv")
-  link_dyads.to_csv("/mnt/8tb_a/rwd_github_private/DataJobsByRexDouglass/jobranker/database//link_dyads.csv")
 
-#Download and process the seed URLs
+#Download and process the seed URLs from live googlesheet
 #https://docs.google.com/spreadsheets/d/1G8omZkflKz6xa7hb2pqvjbWarnSMXbLUInM1XITF2RE/edit?usp=sharing
 sheet_id="1G8omZkflKz6xa7hb2pqvjbWarnSMXbLUInM1XITF2RE"
 sheet_name="linkstojobposts"
@@ -38,6 +39,7 @@ len(seed_urls)
 seed_urls_remaining = set(seed_urls).difference(set(link_dyads['url_a'].values))
 len(seed_urls_remaining)
 
+#Iterative over and scrape seed URLS
 for url in seed_urls_remaining:
   print(url)
   html=scrape_url(url)
@@ -77,19 +79,14 @@ regex_remote(database=database)
 
 #Weak Supervision Ranking
 ranker(database=database)
-  
 
+#Pull ranked jobs and push them back to google sheets for viewing
 with duckdb.connect(database=database, read_only=False) as con: 
   job_posts=pd.read_sql("SELECT rex_rank, job_title_best, remote, url  FROM job_posts ORDER BY rex_rank DESC;", con, parse_dates=["date_observed","date_posted"])
-job_posts.shape
 
-
-#pip install pygsheets
-import pygsheets
-import numpy as np
-gc = pygsheets.authorize(service_file="/home/skynet3/Downloads/client_secret.json") #jobsearch-374103-2a80f051902c.json
-sh=gc.open_by_key('1S7nqIVHYzNPh0RlnNMBBlKh5l40E6P67_KdUtpOJK50')
-worksheet = sh.worksheet('title','CandidatePosts')
-worksheet.set_dataframe(job_posts.head(1000),(1,1))
+  gc = pygsheets.authorize(service_file="/home/skynet3/Downloads/client_secret.json") #Local secret file, will need your own
+  sh=gc.open_by_key('1S7nqIVHYzNPh0RlnNMBBlKh5l40E6P67_KdUtpOJK50')
+  worksheet = sh.worksheet('title','CandidatePosts')
+  worksheet.set_dataframe(job_posts.head(1000),(1,1))
 
 
