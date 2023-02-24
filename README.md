@@ -5,6 +5,8 @@
 
 This is a github repository for a personal project JobRanker which scrapes job postings, extracts key facts, and provides a personalized ranking for review.
 
+It is acompanied by a [presentation (google slides)](https://docs.google.com/presentation/d/1rEhmupKEFMVL-AIfbMPOm31xkXFfMUPX_gnOtvO3FOA/edit?usp=sharing).
+
 ## Authors:
 
 [Rex W. Douglass](http://www.rexdouglass.com)
